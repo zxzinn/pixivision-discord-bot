@@ -41,12 +41,12 @@ export async function execute(
 	if (!interaction.guildId) {
 		await interaction.reply({
 			embeds: [createErrorEmbed("This command can only be used in a server.")],
-			ephemeral: true,
+			flags: 64, // Ephemeral
 		});
 		return;
 	}
 
-	await interaction.deferReply({ ephemeral: true });
+	await interaction.deferReply({ flags: 64 }); // 64 = Ephemeral
 
 	try {
 		const channel = interaction.options.getChannel("channel", true);
