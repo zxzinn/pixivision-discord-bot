@@ -1,13 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
 
-echo "🔍 Running Biome checks..."
 bun run check
-
-if [ $? -ne 0 ]; then
-  echo ""
-  echo "❌ Biome check failed. Please fix the issues before committing."
-  echo "💡 Run 'bun run check' to fix automatically"
-  exit 1
-fi
-
-echo "✅ Biome check passed!"
