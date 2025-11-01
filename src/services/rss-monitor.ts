@@ -1,6 +1,7 @@
 import RssFeedEmitter from "rss-feed-emitter";
 import type { Language, PixivisionArticle } from "@/models/types.ts";
 import { LANGUAGE_NAMES, RSS_FEEDS } from "@/models/types.ts";
+import { cleanText, extractImageUrl } from "@/utils/rss-parser.ts";
 
 type RSSImageObject = {
 	url?: string;
@@ -78,22 +79,13 @@ class RSSMonitorService {
 			}
 
 			// Extract image URL from RSS item
-			let imageUrl = "";
-			if (typeof item.image === "string") {
-				imageUrl = item.image;
-			} else if (
-				item.image &&
-				typeof item.image === "object" &&
-				item.image.url
-			) {
-				imageUrl = item.image.url;
-			}
+			const imageUrl = extractImageUrl(item.image);
 
 			// Parse the RSS item into our article format
 			const article: PixivisionArticle = {
-				title: this.cleanText(item.title),
+				title: cleanText(item.title),
 				url: item.link,
-				description: this.cleanText(item.description || ""),
+				description: cleanText(item.description || ""),
 				category: item.category || "未分類",
 				imageUrl,
 				language,
@@ -118,19 +110,6 @@ class RSSMonitorService {
 		if (feedUrl.includes("/ja/")) return "ja";
 		if (feedUrl.includes("/en/")) return "en";
 		return null;
-	}
-
-	private cleanText(text: string): string {
-		// Remove HTML tags and decode HTML entities
-		return text
-			.replace(/<[^>]*>/g, "")
-			.replace(/&nbsp;/g, " ")
-			.replace(/&amp;/g, "&")
-			.replace(/&lt;/g, "<")
-			.replace(/&gt;/g, ">")
-			.replace(/&quot;/g, '"')
-			.replace(/&#039;/g, "'")
-			.trim();
 	}
 }
 
