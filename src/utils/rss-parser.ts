@@ -61,6 +61,9 @@ export async function fetchRecentArticles(
 				description: string;
 				category?: string;
 				image?: string | RSSImageObject;
+				"rss:image"?: {
+					url?: { "#": string };
+				};
 			}) => {
 				if (itemCount >= count) {
 					feeder.destroy();
@@ -68,7 +71,11 @@ export async function fetchRecentArticles(
 					return;
 				}
 
-				const imageUrl = extractImageUrl(item.image);
+				// Extract image URL - rss-feed-emitter puts it in "rss:image"
+				let imageUrl = extractImageUrl(item.image);
+				if (!imageUrl && item["rss:image"]?.url?.["#"]) {
+					imageUrl = item["rss:image"].url["#"];
+				}
 
 				const article: PixivisionArticle = {
 					title: cleanText(item.title),
