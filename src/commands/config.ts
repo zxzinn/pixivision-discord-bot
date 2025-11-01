@@ -1,5 +1,6 @@
 import {
 	type ChatInputCommandInteraction,
+	MessageFlags,
 	PermissionFlagsBits,
 	SlashCommandBuilder,
 } from "discord.js";
@@ -41,12 +42,12 @@ export async function execute(
 	if (!interaction.guildId) {
 		await interaction.reply({
 			embeds: [createErrorEmbed("This command can only be used in a server.")],
-			ephemeral: true,
+			flags: MessageFlags.Ephemeral,
 		});
 		return;
 	}
 
-	await interaction.deferReply({ ephemeral: true });
+	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
 	try {
 		const channel = interaction.options.getChannel("channel", true);
