@@ -27,7 +27,7 @@ export function createArticleEmbed(article: PixivisionArticle): EmbedBuilder {
 		});
 
 	// Add image if available
-	if (article.imageUrl) {
+	if (article.imageUrl && typeof article.imageUrl === "string") {
 		embed.setImage(article.imageUrl);
 	}
 
