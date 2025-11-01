@@ -5,10 +5,10 @@ import {
 	SlashCommandBuilder,
 } from "discord.js";
 import type { Language } from "@/models/types.ts";
-import { LANGUAGE_NAMES, RSS_FEEDS } from "@/models/types.ts";
+import { LANGUAGE_NAMES } from "@/models/types.ts";
 import { notificationService } from "@/services/notification.ts";
-import { supabase } from "@/services/supabase.ts";
 import { createErrorEmbed, createInfoEmbed } from "@/utils/embed-builder.ts";
+import { fetchRecentArticles } from "@/utils/rss-parser.ts";
 
 export const data = new SlashCommandBuilder()
 	.setName("pv-resend")
@@ -55,61 +55,10 @@ export async function execute(
 		) as Language;
 		const count = interaction.options.getInteger("count") || 5;
 
-		// Fetch RSS feed to get recent articles
-		const response = await fetch(RSS_FEEDS[language]);
-		const text = await response.text();
+		// Fetch recent articles using shared RSS parser
+		const articles = await fetchRecentArticles(language, count);
 
-		// Parse RSS XML (simple parsing, could use xml2js for production)
-		const items: Array<{
-			title: string;
-			link: string;
-			pubDate: Date;
-			description: string;
-			category: string;
-			imageUrl: string;
-		}> = [];
-
-		// Extract items using regex (basic parsing)
-		const itemRegex = /<item>(.*?)<\/item>/gs;
-		const matches = [...text.matchAll(itemRegex)];
-
-		for (const match of matches.slice(0, count)) {
-			const itemXml = match[1];
-
-			const titleMatch = itemXml.match(
-				/<title><!\[CDATA\[(.*?)\]\]><\/title>/s,
-			);
-			const linkMatch = itemXml.match(/<link>(.*?)<\/link>/s);
-			const pubDateMatch = itemXml.match(/<pubDate>(.*?)<\/pubDate>/s);
-			const descMatch = itemXml.match(
-				/<description><!\[CDATA\[(.*?)\]\]><\/description>/s,
-			);
-			const categoryMatch = itemXml.match(
-				/<category><!\[CDATA\[(.*?)\]\]><\/category>/s,
-			);
-
-			// Extract image URL
-			let imageUrl = "";
-			const imageUrlMatch = itemXml.match(
-				/<image>\s*<url>(.*?)<\/url>.*?<\/image>/s,
-			);
-			if (imageUrlMatch) {
-				imageUrl = imageUrlMatch[1].trim();
-			}
-
-			if (titleMatch && linkMatch && pubDateMatch) {
-				items.push({
-					title: titleMatch[1].trim(),
-					link: linkMatch[1].trim(),
-					pubDate: new Date(pubDateMatch[1].trim()),
-					description: descMatch ? descMatch[1].trim() : "",
-					category: categoryMatch ? categoryMatch[1].trim() : "未分類",
-					imageUrl,
-				});
-			}
-		}
-
-		if (items.length === 0) {
+		if (articles.length === 0) {
 			await interaction.editReply({
 				embeds: [createErrorEmbed("No articles found to resend.")],
 			});
@@ -118,18 +67,8 @@ export async function execute(
 
 		// Send articles to current channel
 		let successCount = 0;
-		for (const item of items) {
+		for (const article of articles) {
 			try {
-				const article = {
-					title: item.title,
-					url: item.link,
-					description: item.description,
-					category: item.category,
-					imageUrl: item.imageUrl,
-					language,
-					pubDate: item.pubDate,
-				};
-
 				await notificationService.testNotification(
 					interaction.channelId,
 					article,
