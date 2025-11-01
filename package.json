@@ -13,8 +13,7 @@
 		"lint:fix": "biome check --write .",
 		"format": "biome format --write .",
 		"check": "biome check --write .",
-		"railway:setup": "bash scripts/railway-setup.sh",
-		"prepare": "husky"
+		"railway:setup": "bash scripts/railway-setup.sh"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.3.2",
