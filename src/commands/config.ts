@@ -71,8 +71,12 @@ export async function execute(
 			return;
 		}
 
-		// Save configuration
-		await supabase.setGuildConfig(interaction.guildId, channel.id, languages);
+		// Save configuration (one entry per language)
+		await supabase.setGuildLanguageConfigs(
+			interaction.guildId,
+			channel.id,
+			languages,
+		);
 
 		// Get friendly language names
 		const languageNames = languages.map((lang) => LANGUAGE_NAMES[lang]);

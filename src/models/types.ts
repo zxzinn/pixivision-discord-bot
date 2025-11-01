@@ -17,8 +17,8 @@ export const RSS_FEEDS: Record<Language, string> = {
 // Database types
 export interface GuildConfig {
 	guild_id: string;
+	language: Language;
 	channel_id: string;
-	languages: Language[];
 	created_at: string;
 	updated_at: string;
 }
