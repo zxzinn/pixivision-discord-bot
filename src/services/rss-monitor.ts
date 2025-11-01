@@ -2,14 +2,20 @@ import RssFeedEmitter from "rss-feed-emitter";
 import type { Language, PixivisionArticle } from "@/models/types.ts";
 import { LANGUAGE_NAMES, RSS_FEEDS } from "@/models/types.ts";
 
+type RSSImageObject = {
+	url?: string;
+	link?: string;
+	title?: string;
+};
+
 type RSSFeedEmitterItem = {
 	title: string;
 	link: string;
 	pubdate: string;
 	description: string;
 	category?: string;
-	image?: string;
-	smallimage?: string;
+	image?: string | RSSImageObject;
+	smallimage?: string | RSSImageObject;
 	meta: {
 		link: string;
 		title: string;
@@ -71,13 +77,25 @@ class RSSMonitorService {
 				return;
 			}
 
+			// Extract image URL from RSS item
+			let imageUrl = "";
+			if (typeof item.image === "string") {
+				imageUrl = item.image;
+			} else if (
+				item.image &&
+				typeof item.image === "object" &&
+				item.image.url
+			) {
+				imageUrl = item.image.url;
+			}
+
 			// Parse the RSS item into our article format
 			const article: PixivisionArticle = {
 				title: this.cleanText(item.title),
 				url: item.link,
 				description: this.cleanText(item.description || ""),
 				category: item.category || "未分類",
-				imageUrl: typeof item.image === "string" ? item.image : "",
+				imageUrl,
 				language,
 				pubDate: new Date(item.pubdate),
 			};
