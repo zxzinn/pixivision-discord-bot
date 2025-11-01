@@ -64,6 +64,7 @@ export async function execute(
 
 		let totalSuccessCount = 0;
 		let totalArticleCount = 0;
+		let totalFailureCount = 0;
 
 		// Fetch and send articles for each language
 		for (const language of languages) {
@@ -87,6 +88,7 @@ export async function execute(
 						totalSuccessCount++;
 					} catch (error) {
 						console.error("Error sending article:", error);
+						totalFailureCount++;
 					}
 				}
 			} catch (error) {
@@ -106,11 +108,16 @@ export async function execute(
 				? "all languages"
 				: LANGUAGE_NAMES[languageInput as Language];
 
+		const failureWarning =
+			totalFailureCount > 0
+				? `\n⚠️ ${totalFailureCount} article(s) failed to send.`
+				: "";
+
 		await interaction.editReply({
 			embeds: [
 				createInfoEmbed(
 					"✅ Articles Resent",
-					`Successfully resent ${totalSuccessCount} article(s) (${languageText}) to this channel.`,
+					`Successfully resent ${totalSuccessCount} article(s) (${languageText}) to this channel.${failureWarning}`,
 				),
 			],
 		});
