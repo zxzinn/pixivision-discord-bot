@@ -81,7 +81,11 @@ class RSSMonitorService {
 			let imageUrl = "";
 			if (typeof item.image === "string") {
 				imageUrl = item.image;
-			} else if (item.image && typeof item.image === "object" && item.image.url) {
+			} else if (
+				item.image &&
+				typeof item.image === "object" &&
+				item.image.url
+			) {
 				imageUrl = item.image.url;
 			}
 
