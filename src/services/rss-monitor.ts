@@ -77,7 +77,7 @@ class RSSMonitorService {
 				url: item.link,
 				description: this.cleanText(item.description || ""),
 				category: item.category || "未分類",
-				imageUrl: item.image || "",
+				imageUrl: typeof item.image === "string" ? item.image : "",
 				language,
 				pubDate: new Date(item.pubdate),
 			};
