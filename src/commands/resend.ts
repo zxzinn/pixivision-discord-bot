@@ -19,6 +19,7 @@ export const data = new SlashCommandBuilder()
 			.setDescription("Language of articles to resend")
 			.setRequired(true)
 			.addChoices(
+				{ name: "All (中文, 日本語, English)", value: "all" },
 				{ name: "繁體中文", value: "zh-tw" },
 				{ name: "日本語", value: "ja" },
 				{ name: "English", value: "en" },
@@ -27,10 +28,11 @@ export const data = new SlashCommandBuilder()
 	.addIntegerOption((option) =>
 		option
 			.setName("count")
-			.setDescription("Number of recent articles to resend (1-20)")
+			.setDescription(
+				"Number of recent articles to resend per language (leave empty for all)",
+			)
 			.setRequired(false)
-			.setMinValue(1)
-			.setMaxValue(20),
+			.setMinValue(1),
 	)
 	.setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
 	.setDMPermission(false);
@@ -49,41 +51,66 @@ export async function execute(
 	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
 	try {
-		const language = interaction.options.getString(
-			"language",
-			true,
-		) as Language;
-		const count = interaction.options.getInteger("count") || 5;
+		const languageInput = interaction.options.getString("language", true);
+		const countInput = interaction.options.getInteger("count");
+		// If count is not specified, fetch all available articles (typically ~20 per feed)
+		const count = countInput ?? 100; // Set high enough to get all articles from feed
 
-		// Fetch recent articles using shared RSS parser
-		const articles = await fetchRecentArticles(language, count);
+		// Determine which languages to fetch
+		const languages: Language[] =
+			languageInput === "all"
+				? ["zh-tw", "ja", "en"]
+				: [languageInput as Language];
 
-		if (articles.length === 0) {
+		let totalSuccessCount = 0;
+		let totalArticleCount = 0;
+
+		// Fetch and send articles for each language
+		for (const language of languages) {
+			try {
+				// Fetch recent articles using shared RSS parser
+				const articles = await fetchRecentArticles(language, count);
+				totalArticleCount += articles.length;
+
+				if (articles.length === 0) {
+					console.warn(`No articles found for ${language}`);
+					continue;
+				}
+
+				// Send articles to current channel
+				for (const article of articles) {
+					try {
+						await notificationService.testNotification(
+							interaction.channelId,
+							article,
+						);
+						totalSuccessCount++;
+					} catch (error) {
+						console.error("Error sending article:", error);
+					}
+				}
+			} catch (error) {
+				console.error(`Error fetching ${language} articles:`, error);
+			}
+		}
+
+		if (totalArticleCount === 0) {
 			await interaction.editReply({
 				embeds: [createErrorEmbed("No articles found to resend.")],
 			});
 			return;
 		}
 
-		// Send articles to current channel
-		let successCount = 0;
-		for (const article of articles) {
-			try {
-				await notificationService.testNotification(
-					interaction.channelId,
-					article,
-				);
-				successCount++;
-			} catch (error) {
-				console.error("Error sending article:", error);
-			}
-		}
+		const languageText =
+			languageInput === "all"
+				? "all languages"
+				: LANGUAGE_NAMES[languageInput as Language];
 
 		await interaction.editReply({
 			embeds: [
 				createInfoEmbed(
 					"✅ Articles Resent",
-					`Successfully resent ${successCount} ${LANGUAGE_NAMES[language]} article(s) to this channel.`,
+					`Successfully resent ${totalSuccessCount} article(s) (${languageText}) to this channel.`,
 				),
 			],
 		});
