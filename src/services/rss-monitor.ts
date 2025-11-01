@@ -17,6 +17,9 @@ type RSSFeedEmitterItem = {
 	category?: string;
 	image?: string | RSSImageObject;
 	smallimage?: string | RSSImageObject;
+	"rss:image"?: {
+		url?: { "#": string };
+	};
 	meta: {
 		link: string;
 		title: string;
@@ -79,7 +82,11 @@ class RSSMonitorService {
 			}
 
 			// Extract image URL from RSS item
-			const imageUrl = extractImageUrl(item.image);
+			let imageUrl = extractImageUrl(item.image);
+			// rss-feed-emitter puts image data in "rss:image" field
+			if (!imageUrl && item["rss:image"]?.url?.["#"]) {
+				imageUrl = item["rss:image"].url["#"];
+			}
 
 			// Parse the RSS item into our article format
 			const article: PixivisionArticle = {
