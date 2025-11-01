@@ -19,24 +19,40 @@ class SupabaseService {
 
 	// Guild Configuration Methods
 
-	async getGuildConfig(guildId: string): Promise<GuildConfig | null> {
+	/**
+	 * Get all language configs for a guild
+	 */
+	async getGuildConfigs(guildId: string): Promise<GuildConfig[]> {
+		const { data, error } = await this.client
+			.from("guild_configs")
+			.select("*")
+			.eq("guild_id", guildId);
+
+		if (error) throw error;
+		return data || [];
+	}
+
+	/**
+	 * Get config for a specific language in a guild
+	 */
+	async getGuildLanguageConfig(
+		guildId: string,
+		language: Language,
+	): Promise<GuildConfig | null> {
 		const { data, error } = await this.client
 			.from("guild_configs")
 			.select("*")
 			.eq("guild_id", guildId)
-			.single();
+			.eq("language", language)
+			.maybeSingle();
 
-		if (error) {
-			if (error.code === "PGRST116") {
-				// No rows returned
-				return null;
-			}
-			throw error;
-		}
-
+		if (error) throw error;
 		return data;
 	}
 
+	/**
+	 * Get all guild configs (for notification service)
+	 */
 	async getAllGuildConfigs(): Promise<GuildConfig[]> {
 		const { data, error } = await this.client.from("guild_configs").select("*");
 
@@ -44,32 +60,53 @@ class SupabaseService {
 		return data || [];
 	}
 
-	async setGuildConfig(
+	/**
+	 * Set channel for specific language(s) in a guild
+	 * If multiple languages provided, creates one config per language
+	 */
+	async setGuildLanguageConfigs(
 		guildId: string,
 		channelId: string,
 		languages: Language[],
-	): Promise<GuildConfig> {
+	): Promise<GuildConfig[]> {
+		const configs = languages.map((language) => ({
+			guild_id: guildId,
+			language,
+			channel_id: channelId,
+			updated_at: new Date().toISOString(),
+		}));
+
 		const { data, error } = await this.client
 			.from("guild_configs")
-			.upsert(
-				{
-					guild_id: guildId,
-					channel_id: channelId,
-					languages,
-					updated_at: new Date().toISOString(),
-				},
-				{
-					onConflict: "guild_id",
-				},
-			)
-			.select()
-			.single();
+			.upsert(configs, {
+				onConflict: "guild_id,language",
+			})
+			.select();
 
 		if (error) throw error;
-		return data;
+		return data || [];
 	}
 
-	async deleteGuildConfig(guildId: string): Promise<void> {
+	/**
+	 * Delete specific language config
+	 */
+	async deleteGuildLanguageConfig(
+		guildId: string,
+		language: Language,
+	): Promise<void> {
+		const { error } = await this.client
+			.from("guild_configs")
+			.delete()
+			.eq("guild_id", guildId)
+			.eq("language", language);
+
+		if (error) throw error;
+	}
+
+	/**
+	 * Delete all configs for a guild
+	 */
+	async deleteAllGuildConfigs(guildId: string): Promise<void> {
 		const { error } = await this.client
 			.from("guild_configs")
 			.delete()

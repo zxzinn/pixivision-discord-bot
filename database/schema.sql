@@ -2,13 +2,14 @@
 -- Run this in your Supabase SQL editor
 
 -- Table: guild_configs
--- Stores configuration for each Discord server
+-- Stores per-language channel configuration for each Discord server
 CREATE TABLE IF NOT EXISTS guild_configs (
-  guild_id TEXT PRIMARY KEY,
+  guild_id TEXT NOT NULL,
+  language TEXT NOT NULL,
   channel_id TEXT NOT NULL,
-  languages TEXT[] DEFAULT ARRAY['zh-tw', 'ja', 'en']::TEXT[],
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  PRIMARY KEY (guild_id, language)
 );
 
 -- Table: posted_articles
@@ -25,6 +26,7 @@ CREATE TABLE IF NOT EXISTS posted_articles (
 
 -- Create indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_guild_configs_guild_id ON guild_configs(guild_id);
+CREATE INDEX IF NOT EXISTS idx_guild_configs_channel_id ON guild_configs(channel_id);
 CREATE INDEX IF NOT EXISTS idx_posted_articles_lookup ON posted_articles(article_url, guild_id);
 CREATE INDEX IF NOT EXISTS idx_posted_articles_guild ON posted_articles(guild_id);
 
@@ -55,8 +57,8 @@ CREATE POLICY "Enable all access for service role" ON posted_articles
   FOR ALL USING (true);
 
 -- Comments for documentation
-COMMENT ON TABLE guild_configs IS 'Stores Discord server configuration for Pixivision notifications';
+COMMENT ON TABLE guild_configs IS 'Stores per-language Discord channel configuration for Pixivision notifications';
 COMMENT ON TABLE posted_articles IS 'Tracks posted articles to prevent duplicates';
 COMMENT ON COLUMN guild_configs.guild_id IS 'Discord server (guild) ID';
-COMMENT ON COLUMN guild_configs.channel_id IS 'Discord channel ID where notifications are sent';
-COMMENT ON COLUMN guild_configs.languages IS 'Array of language codes to monitor (zh-tw, ja, en)';
+COMMENT ON COLUMN guild_configs.language IS 'Language code (zh-tw, ja, en)';
+COMMENT ON COLUMN guild_configs.channel_id IS 'Discord channel ID where notifications for this language are sent';

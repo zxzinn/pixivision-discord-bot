@@ -17,20 +17,18 @@ class NotificationService {
 		}
 
 		try {
-			// Get all guild configs
-			const guildConfigs = await supabase.getAllGuildConfigs();
-
-			console.log(
-				`Processing article for ${guildConfigs.length} configured servers...`,
+			// Get all guild configs and filter for matching language
+			const allConfigs = await supabase.getAllGuildConfigs();
+			const matchingConfigs = allConfigs.filter(
+				(config) => config.language === article.language,
 			);
 
-			for (const config of guildConfigs) {
-				try {
-					// Check if this guild wants this language
-					if (!config.languages.includes(article.language)) {
-						continue;
-					}
+			console.log(
+				`Processing ${article.language} article for ${matchingConfigs.length} configured channel(s)...`,
+			);
 
+			for (const config of matchingConfigs) {
+				try {
 					// Check if already posted to this guild
 					const alreadyPosted = await supabase.isArticlePosted(
 						article.url,
