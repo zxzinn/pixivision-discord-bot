@@ -10,7 +10,7 @@ import { supabase } from "@/services/supabase.ts";
 import { createConfigEmbed, createErrorEmbed } from "@/utils/embed-builder.ts";
 
 export const data = new SlashCommandBuilder()
-	.setName("pixivision-config")
+	.setName("pv-config")
 	.setDescription("Configure Pixivision notifications for this server")
 	.addChannelOption((option) =>
 		option

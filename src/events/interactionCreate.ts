@@ -1,6 +1,7 @@
 import type { Interaction } from "discord.js";
 import { Events } from "discord.js";
 import * as configCommand from "@/commands/config.ts";
+import * as resendCommand from "@/commands/resend.ts";
 
 export const name = Events.InteractionCreate;
 
@@ -9,8 +10,11 @@ export async function execute(interaction: Interaction): Promise<void> {
 
 	try {
 		switch (interaction.commandName) {
-			case "pixivision-config":
+			case "pv-config":
 				await configCommand.execute(interaction);
+				break;
+			case "pv-resend":
+				await resendCommand.execute(interaction);
 				break;
 			default:
 				console.warn(`Unknown command: ${interaction.commandName}`);

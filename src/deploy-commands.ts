@@ -1,5 +1,6 @@
 import { REST, Routes } from "discord.js";
 import * as configCommand from "@/commands/config.ts";
+import * as resendCommand from "@/commands/resend.ts";
 
 const token = process.env.DISCORD_TOKEN;
 const clientId = process.env.DISCORD_CLIENT_ID;
@@ -11,7 +12,7 @@ if (!token || !clientId) {
 	process.exit(1);
 }
 
-const commands = [configCommand.data.toJSON()];
+const commands = [configCommand.data.toJSON(), resendCommand.data.toJSON()];
 
 const rest = new REST().setToken(token);
 
