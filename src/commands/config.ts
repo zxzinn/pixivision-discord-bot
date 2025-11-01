@@ -21,13 +21,19 @@ export const data = new SlashCommandBuilder()
 	.addStringOption((option) =>
 		option
 			.setName("languages")
-			.setDescription("Languages to monitor (comma-separated)")
+			.setDescription("Languages to monitor (same content, different language)")
 			.setRequired(false)
 			.addChoices(
-				{ name: "All (中文, 日本語, English)", value: "zh-tw,ja,en" },
-				{ name: "繁體中文 only", value: "zh-tw" },
-				{ name: "日本語 only", value: "ja" },
-				{ name: "English only", value: "en" },
+				{
+					name: "All (中文, 日本語, English) - will duplicate",
+					value: "zh-tw,ja,en",
+				},
+				{
+					name: "繁體中文 only (recommended for TW community)",
+					value: "zh-tw",
+				},
+				{ name: "日本語 only (recommended for JP community)", value: "ja" },
+				{ name: "English only (recommended for EN community)", value: "en" },
 				{ name: "中文 + 日本語", value: "zh-tw,ja" },
 				{ name: "中文 + English", value: "zh-tw,en" },
 				{ name: "日本語 + English", value: "ja,en" },
