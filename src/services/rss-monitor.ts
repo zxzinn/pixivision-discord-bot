@@ -34,6 +34,7 @@ class RSSMonitorService {
 	constructor() {
 		this.feeder = new RssFeedEmitter({
 			userAgent: "Pixivision-Discord-Bot/1.0",
+			skipFirstLoad: true,
 		});
 
 		// Set up event listeners
