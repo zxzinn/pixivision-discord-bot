@@ -72,10 +72,36 @@ class NotificationService {
 						`  ✓ Sent to guild ${config.guild_id} in channel ${config.channel_id}`,
 					);
 				} catch (error) {
-					console.error(
-						`Error sending notification to guild ${config.guild_id}:`,
-						error,
-					);
+					// Check if it's a Discord API error for Unknown Channel (10003)
+					if (
+						error &&
+						typeof error === "object" &&
+						"code" in error &&
+						error.code === 10003
+					) {
+						console.warn(
+							`Channel ${config.channel_id} no longer exists (Error 10003). Removing configuration for guild ${config.guild_id}, language ${config.language}`,
+						);
+						try {
+							await supabase.deleteGuildLanguageConfig(
+								config.guild_id,
+								config.language,
+							);
+							console.log(
+								`  ✓ Removed invalid configuration for guild ${config.guild_id}, language ${config.language}`,
+							);
+						} catch (cleanupError) {
+							console.error(
+								`Failed to cleanup invalid configuration:`,
+								cleanupError,
+							);
+						}
+					} else {
+						console.error(
+							`Error sending notification to guild ${config.guild_id}:`,
+							error,
+						);
+					}
 				}
 			}
 		} catch (error) {
