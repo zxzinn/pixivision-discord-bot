@@ -7,6 +7,18 @@ type RSSImageObject = {
 	title?: string;
 };
 
+type AtomNestedValue = {
+	"@"?: Record<string, unknown>;
+	"#"?: string;
+};
+
+type AtomImageObject = {
+	"@"?: Record<string, unknown>;
+	url?: AtomNestedValue;
+	link?: AtomNestedValue;
+	title?: AtomNestedValue;
+};
+
 /**
  * Extract image URL from RSS item image field
  */
@@ -64,6 +76,7 @@ export async function fetchRecentArticles(
 				"rss:image"?: {
 					url?: { "#": string };
 				};
+				"atom:image"?: AtomImageObject;
 			}) => {
 				if (itemCount >= count) {
 					feeder.destroy();
@@ -71,10 +84,15 @@ export async function fetchRecentArticles(
 					return;
 				}
 
-				// Extract image URL - rss-feed-emitter puts it in "rss:image"
-				let imageUrl = extractImageUrl(item.image);
-				if (!imageUrl && item["rss:image"]?.url?.["#"]) {
+				// Extract image URL
+				// Priority: atom:image (Atom feeds) > rss:image (RSS 2.0) > image (fallback)
+				let imageUrl: string;
+				if (item["atom:image"]?.url?.["#"]) {
+					imageUrl = item["atom:image"].url["#"];
+				} else if (item["rss:image"]?.url?.["#"]) {
 					imageUrl = item["rss:image"].url["#"];
+				} else {
+					imageUrl = extractImageUrl(item.image);
 				}
 
 				const article: PixivisionArticle = {

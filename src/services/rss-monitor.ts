@@ -9,6 +9,18 @@ type RSSImageObject = {
 	title?: string;
 };
 
+type AtomNestedValue = {
+	"@"?: Record<string, unknown>;
+	"#"?: string;
+};
+
+type AtomImageObject = {
+	"@"?: Record<string, unknown>;
+	url?: AtomNestedValue;
+	link?: AtomNestedValue;
+	title?: AtomNestedValue;
+};
+
 type RSSFeedEmitterItem = {
 	title: string;
 	link: string;
@@ -20,6 +32,13 @@ type RSSFeedEmitterItem = {
 	"rss:image"?: {
 		url?: { "#": string };
 	};
+	// Atom format fields (pixivision uses Atom feeds)
+	"atom:image"?: AtomImageObject;
+	"atom:smallimage"?: AtomImageObject;
+	"atom:link"?: {
+		"@"?: { href?: string };
+	};
+	"atom:category"?: AtomNestedValue;
 	meta: {
 		link: string;
 		title: string;
@@ -83,10 +102,14 @@ class RSSMonitorService {
 			}
 
 			// Extract image URL from RSS item
-			let imageUrl = extractImageUrl(item.image);
-			// rss-feed-emitter puts image data in "rss:image" field
-			if (!imageUrl && item["rss:image"]?.url?.["#"]) {
+			// Priority: atom:image (Atom feeds) > rss:image (RSS 2.0) > image (fallback)
+			let imageUrl: string;
+			if (item["atom:image"]?.url?.["#"]) {
+				imageUrl = item["atom:image"].url["#"];
+			} else if (item["rss:image"]?.url?.["#"]) {
 				imageUrl = item["rss:image"].url["#"];
+			} else {
+				imageUrl = extractImageUrl(item.image);
 			}
 
 			// Parse the RSS item into our article format
