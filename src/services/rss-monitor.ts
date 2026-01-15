@@ -1,50 +1,7 @@
 import RssFeedEmitter from "rss-feed-emitter";
 import type { Language, PixivisionArticle } from "@/models/types.ts";
 import { LANGUAGE_NAMES, RSS_FEEDS } from "@/models/types.ts";
-import { cleanText, extractImageUrl } from "@/utils/rss-parser.ts";
-
-type RSSImageObject = {
-	url?: string;
-	link?: string;
-	title?: string;
-};
-
-type AtomNestedValue = {
-	"@"?: Record<string, unknown>;
-	"#"?: string;
-};
-
-type AtomImageObject = {
-	"@"?: Record<string, unknown>;
-	url?: AtomNestedValue;
-	link?: AtomNestedValue;
-	title?: AtomNestedValue;
-};
-
-type RSSFeedEmitterItem = {
-	title: string;
-	link: string;
-	pubdate: string;
-	description: string;
-	category?: string;
-	image?: string | RSSImageObject;
-	smallimage?: string | RSSImageObject;
-	"rss:image"?: {
-		url?: { "#": string };
-	};
-	// Atom format fields (pixivision uses Atom feeds)
-	"atom:image"?: AtomImageObject;
-	"atom:smallimage"?: AtomImageObject;
-	"atom:link"?: {
-		"@"?: { href?: string };
-	};
-	"atom:category"?: AtomNestedValue;
-	meta: {
-		link: string;
-		title: string;
-		[key: string]: unknown;
-	};
-};
+import { type RSSFeedItem, parseRSSItemToArticle } from "@/utils/rss-parser.ts";
 
 class RSSMonitorService {
 	private feeder: RssFeedEmitter;
@@ -57,7 +14,7 @@ class RSSMonitorService {
 		});
 
 		// Set up event listeners
-		this.feeder.on("new-item", (item: RSSFeedEmitterItem) => {
+		this.feeder.on("new-item", (item: RSSFeedItem) => {
 			this.handleNewItem(item);
 		});
 
@@ -91,7 +48,7 @@ class RSSMonitorService {
 		this.onNewArticleCallback = callback;
 	}
 
-	private handleNewItem(item: RSSFeedEmitterItem): void {
+	private handleNewItem(item: RSSFeedItem): void {
 		try {
 			// Determine language from feed URL
 			const language = this.detectLanguage(item.meta.link);
@@ -101,32 +58,7 @@ class RSSMonitorService {
 				return;
 			}
 
-			// Extract image URL from RSS item
-			// Priority: atom:image (Atom feeds) > rss:image (RSS 2.0) > image (fallback)
-			let imageUrl: string;
-			if (item["atom:image"]?.url?.["#"]) {
-				imageUrl = item["atom:image"].url["#"];
-			} else if (item["rss:image"]?.url?.["#"]) {
-				imageUrl = item["rss:image"].url["#"];
-			} else {
-				imageUrl = extractImageUrl(item.image);
-			}
-
-			// Extract article URL
-			// Priority: atom:link (Atom feeds) > link (RSS 2.0)
-			const articleUrl =
-				item["atom:link"]?.["@"]?.href || item.link || "";
-
-			// Parse the RSS item into our article format
-			const article: PixivisionArticle = {
-				title: cleanText(item.title),
-				url: articleUrl,
-				description: cleanText(item.description || ""),
-				category: item.category || "未分類",
-				imageUrl,
-				language,
-				pubDate: new Date(item.pubdate),
-			};
+			const article = parseRSSItemToArticle(item, language);
 
 			console.log(
 				`New article detected: [${LANGUAGE_NAMES[language]}] ${article.title}`,

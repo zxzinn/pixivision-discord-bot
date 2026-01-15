@@ -1,26 +1,59 @@
 import type { Language, PixivisionArticle } from "@/models/types.ts";
 import { RSS_FEEDS } from "@/models/types.ts";
 
-type RSSImageObject = {
+// ============================================================================
+// RSS/Atom Feed Types
+// ============================================================================
+
+export type RSSImageObject = {
 	url?: string;
 	link?: string;
 	title?: string;
 };
 
-type AtomNestedValue = {
+export type AtomNestedValue = {
 	"@"?: Record<string, unknown>;
 	"#"?: string;
 };
 
-type AtomImageObject = {
+export type AtomImageObject = {
 	"@"?: Record<string, unknown>;
 	url?: AtomNestedValue;
 	link?: AtomNestedValue;
 	title?: AtomNestedValue;
 };
 
+export type RSSFeedItem = {
+	title: string;
+	link: string;
+	pubdate: string;
+	description: string;
+	category?: string;
+	image?: string | RSSImageObject;
+	smallimage?: string | RSSImageObject;
+	"rss:image"?: {
+		url?: { "#": string };
+	};
+	// Atom format fields (pixivision uses Atom feeds)
+	"atom:image"?: AtomImageObject;
+	"atom:smallimage"?: AtomImageObject;
+	"atom:link"?: {
+		"@"?: { href?: string };
+	};
+	"atom:category"?: AtomNestedValue;
+	meta: {
+		link: string;
+		title: string;
+		[key: string]: unknown;
+	};
+};
+
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
 /**
- * Extract image URL from RSS item image field
+ * Extract image URL from legacy RSS image field
  */
 export function extractImageUrl(image?: string | RSSImageObject): string {
 	if (typeof image === "string") {
@@ -30,6 +63,28 @@ export function extractImageUrl(image?: string | RSSImageObject): string {
 		return image.url;
 	}
 	return "";
+}
+
+/**
+ * Extract image URL from RSS feed item
+ * Priority: atom:image (Atom feeds) > rss:image (RSS 2.0) > image (fallback)
+ */
+export function extractArticleImageUrl(item: RSSFeedItem): string {
+	if (item["atom:image"]?.url?.["#"]) {
+		return item["atom:image"].url["#"];
+	}
+	if (item["rss:image"]?.url?.["#"]) {
+		return item["rss:image"].url["#"];
+	}
+	return extractImageUrl(item.image);
+}
+
+/**
+ * Extract article URL from RSS feed item
+ * Priority: atom:link (Atom feeds) > link (RSS 2.0)
+ */
+export function extractArticleUrl(item: RSSFeedItem): string {
+	return item["atom:link"]?.["@"]?.href || item.link || "";
 }
 
 /**
@@ -48,6 +103,28 @@ export function cleanText(text: string): string {
 }
 
 /**
+ * Parse RSS feed item into PixivisionArticle
+ */
+export function parseRSSItemToArticle(
+	item: RSSFeedItem,
+	language: Language,
+): PixivisionArticle {
+	return {
+		title: cleanText(item.title),
+		url: extractArticleUrl(item),
+		description: cleanText(item.description || ""),
+		category: item.category || "未分類",
+		imageUrl: extractArticleImageUrl(item),
+		language,
+		pubDate: new Date(item.pubdate),
+	};
+}
+
+// ============================================================================
+// Fetch Functions
+// ============================================================================
+
+/**
  * Fetch and parse RSS feed to get recent articles
  */
 export async function fetchRecentArticles(
@@ -64,64 +141,22 @@ export async function fetchRecentArticles(
 		const articles: PixivisionArticle[] = [];
 		let itemCount = 0;
 
-		feeder.on(
-			"new-item",
-			(item: {
-				title: string;
-				link: string;
-				pubdate: string;
-				description: string;
-				category?: string;
-				image?: string | RSSImageObject;
-				"rss:image"?: {
-					url?: { "#": string };
-				};
-				"atom:image"?: AtomImageObject;
-				"atom:link"?: {
-					"@"?: { href?: string };
-				};
-			}) => {
-				if (itemCount >= count) {
-					feeder.destroy();
-					resolve(articles);
-					return;
-				}
+		feeder.on("new-item", (item: RSSFeedItem) => {
+			if (itemCount >= count) {
+				feeder.destroy();
+				resolve(articles);
+				return;
+			}
 
-				// Extract image URL
-				// Priority: atom:image (Atom feeds) > rss:image (RSS 2.0) > image (fallback)
-				let imageUrl: string;
-				if (item["atom:image"]?.url?.["#"]) {
-					imageUrl = item["atom:image"].url["#"];
-				} else if (item["rss:image"]?.url?.["#"]) {
-					imageUrl = item["rss:image"].url["#"];
-				} else {
-					imageUrl = extractImageUrl(item.image);
-				}
+			const article = parseRSSItemToArticle(item, language);
+			articles.push(article);
+			itemCount++;
 
-				// Extract article URL
-				// Priority: atom:link (Atom feeds) > link (RSS 2.0)
-				const articleUrl =
-					item["atom:link"]?.["@"]?.href || item.link || "";
-
-				const article: PixivisionArticle = {
-					title: cleanText(item.title),
-					url: articleUrl,
-					description: cleanText(item.description || ""),
-					category: item.category || "未分類",
-					imageUrl,
-					language,
-					pubDate: new Date(item.pubdate),
-				};
-
-				articles.push(article);
-				itemCount++;
-
-				if (itemCount >= count) {
-					feeder.destroy();
-					resolve(articles);
-				}
-			},
-		);
+			if (itemCount >= count) {
+				feeder.destroy();
+				resolve(articles);
+			}
+		});
 
 		feeder.on("error", (error: Error) => {
 			feeder.destroy();
