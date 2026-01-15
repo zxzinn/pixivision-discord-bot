@@ -112,10 +112,15 @@ class RSSMonitorService {
 				imageUrl = extractImageUrl(item.image);
 			}
 
+			// Extract article URL
+			// Priority: atom:link (Atom feeds) > link (RSS 2.0)
+			const articleUrl =
+				item["atom:link"]?.["@"]?.href || item.link || "";
+
 			// Parse the RSS item into our article format
 			const article: PixivisionArticle = {
 				title: cleanText(item.title),
-				url: item.link,
+				url: articleUrl,
 				description: cleanText(item.description || ""),
 				category: item.category || "未分類",
 				imageUrl,

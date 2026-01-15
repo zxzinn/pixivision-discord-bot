@@ -77,6 +77,9 @@ export async function fetchRecentArticles(
 					url?: { "#": string };
 				};
 				"atom:image"?: AtomImageObject;
+				"atom:link"?: {
+					"@"?: { href?: string };
+				};
 			}) => {
 				if (itemCount >= count) {
 					feeder.destroy();
@@ -95,9 +98,14 @@ export async function fetchRecentArticles(
 					imageUrl = extractImageUrl(item.image);
 				}
 
+				// Extract article URL
+				// Priority: atom:link (Atom feeds) > link (RSS 2.0)
+				const articleUrl =
+					item["atom:link"]?.["@"]?.href || item.link || "";
+
 				const article: PixivisionArticle = {
 					title: cleanText(item.title),
-					url: item.link,
+					url: articleUrl,
 					description: cleanText(item.description || ""),
 					category: item.category || "未分類",
 					imageUrl,
