@@ -1,7 +1,7 @@
 import RssFeedEmitter from "rss-feed-emitter";
 import type { Language, PixivisionArticle } from "@/models/types.ts";
 import { LANGUAGE_NAMES, RSS_FEEDS } from "@/models/types.ts";
-import { type RSSFeedItem, parseRSSItemToArticle } from "@/utils/rss-parser.ts";
+import { parseRSSItemToArticle, type RSSFeedItem } from "@/utils/rss-parser.ts";
 
 class RSSMonitorService {
 	private feeder: RssFeedEmitter;
